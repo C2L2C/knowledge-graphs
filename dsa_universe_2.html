@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>DSA Universe — The Beast Explained</title>
+<style>
+* { box-sizing:border-box; margin:0; padding:0; }
+body { background:#07090f; font-family:'Courier New',monospace; color:#e6edf3; overflow:hidden; width:100vw; height:100vh; }
+canvas { position:absolute; top:0; left:0; display:block; }
+.hud-top { position:absolute; top:0; left:0; right:0; height:52px; background:linear-gradient(180deg,rgba(7,9,15,0.98) 0%,transparent 100%); display:flex; align-items:center; padding:0 24px; gap:20px; pointer-events:none; z-index:20; }
+.hud-title { font-size:11px; letter-spacing:4px; color:#c9a84c; font-weight:bold; }
+.hud-sub { font-size:10px; color:#3d444d; letter-spacing:1px; }
+.hud-right { margin-left:auto; font-size:10px; color:#3d444d; }
+#panel { position:absolute; right:20px; top:60px; width:320px; background:rgba(10,12,20,0.97); border:1px solid #1e2530; border-radius:10px; overflow:hidden; opacity:0; transition:opacity .35s ease; z-index:30; pointer-events:none; }
+#panel.visible { opacity:1; pointer-events:all; }
+.panel-header { padding:16px 18px 12px; border-bottom:1px solid #1e2530; }
+.panel-category { font-size:9px; letter-spacing:3px; color:#c9a84c; margin-bottom:4px; }
+.panel-name { font-size:16px; font-weight:bold; color:#e6edf3; margin-bottom:4px; }
+.panel-tagline { font-size:11px; color:#8b949e; line-height:1.5; }
+.panel-body { padding:14px 18px; max-height:calc(100vh - 160px); overflow-y:auto; }
+.panel-section { margin-bottom:12px; }
+.panel-section-title { font-size:9px; letter-spacing:2px; color:#3d444d; margin-bottom:6px; text-transform:uppercase; }
+.panel-item { font-size:11px; color:#8b949e; line-height:1.7; }
+.panel-item span { color:#c9d1d9; }
+.panel-analogy { background:#0d1f3c; border-left:3px solid #58a6ff; padding:8px 12px; border-radius:0 5px 5px 0; font-size:11px; color:#8b949e; line-height:1.6; }
+.panel-analogy em { color:#58a6ff; font-style:normal; }
+.panel-problems { display:flex; gap:6px; flex-wrap:wrap; margin-top:4px; }
+.prob-tag { font-size:9px; padding:2px 8px; border-radius:10px; background:#161b22; border:1px solid #30363d; color:#8b949e; }
+.prob-tag.easy { border-color:#3fb950; color:#3fb950; }
+.prob-tag.med { border-color:#e3b341; color:#e3b341; }
+.prob-tag.hard { border-color:#ff7b72; color:#ff7b72; }
+.legend { position:absolute; bottom:20px; left:20px; z-index:20; display:flex; flex-direction:column; gap:7px; pointer-events:none; }
+.legend-row { display:flex; align-items:center; gap:8px; font-size:10px; color:#3d444d; }
+.legend-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+.controls { position:absolute; bottom:20px; right:20px; z-index:20; display:flex; gap:8px; }
+.ctrl-btn { background:rgba(10,12,20,0.9); border:1px solid #1e2530; color:#3d444d; padding:6px 14px; border-radius:5px; cursor:pointer; font-family:monospace; font-size:11px; transition:all .15s; }
+.ctrl-btn:hover { border-color:#c9a84c; color:#c9a84c; }
+</style>
+</head>
+<body>
+
+<div class="hud-top">
+  <div class="hud-title">THE DSA UNIVERSE</div>
+  <div class="hud-sub">HOVER TO EXPLORE · CLICK TO LOCK · DRAG TO PAN · SCROLL TO ZOOM</div>
+  <div class="hud-right" id="hud-node">14 DOMAINS · 150 NEETCODE PROBLEMS · INFINITE DEPTH →</div>
+</div>
+
+<canvas id="canvas"></canvas>
+
+<div id="panel">
+  <div class="panel-header">
+    <div class="panel-category" id="p-cat"></div>
+    <div class="panel-name" id="p-name"></div>
+    <div class="panel-tagline" id="p-tag"></div>
+  </div>
+  <div class="panel-body">
+    <div class="panel-section">
+      <div class="panel-section-title">🔧 What problem does this solve?</div>
+      <div class="panel-item" id="p-why"></div>
+    </div>
+    <div class="panel-section">
+      <div class="panel-section-title">🌐 Your infra analogy</div>
+      <div class="panel-analogy" id="p-analogy"></div>
+    </div>
+    <div class="panel-section">
+      <div class="panel-section-title">⚡ Real systems using this</div>
+      <div class="panel-item" id="p-systems"></div>
+    </div>
+    <div class="panel-section">
+      <div class="panel-section-title">📌 NeetCode starting problems</div>
+      <div class="panel-problems" id="p-probs"></div>
+    </div>
+  </div>
+</div>
+
+<div class="legend">
+  <div class="legend-row"><div class="legend-dot" style="background:#c9a84c;box-shadow:0 0 6px #c9a84c88"></div>WHY DSA EXISTS (root)</div>
+  <div class="legend-row"><div class="legend-dot" style="background:#58a6ff"></div>PILLARS / CONCEPTS</div>
+  <div class="legend-row"><div class="legend-dot" style="background:#3fb950"></div>DATA STRUCTURES (shape)</div>
+  <div class="legend-row"><div class="legend-dot" style="background:#f0883e"></div>ALGORITHMS (motion)</div>
+  <div class="legend-row"><div class="legend-dot" style="background:#bc8cff"></div>ADVANCED patterns</div>
+  <div class="legend-row"><div class="legend-dot" style="background:#39c5cf"></div>REAL-WORLD domains</div>
+</div>
+
+<div class="controls">
+  <button class="ctrl-btn" onclick="resetView()">RESET VIEW</button>
+  <button class="ctrl-btn" onclick="toggleLabels()">LABELS ON/OFF</button>
+</div>
+
+<script>
+const W = window.innerWidth, H = window.innerHeight;
+const cv = document.getElementById('canvas');
+cv.width = W; cv.height = H;
+const ctx = cv.getContext('2d');
+
+// All positions in pixels relative to canvas center
+const nodes = [
+  // ROOT
+  { id:'why',   label:'WHY\nDSA?',            cx:0,    cy:0,    r:46, color:'#c9a84c', layer:'root',
+    category:'THE ORIGIN — Why DSA Exists',
+    tagline:'Computers have finite memory & time. DSA is the science of using both efficiently.',
+    why:'<span>Every program processes data.</span> Without structure, you\'re just hoping. With the right structure, you control speed, memory, and scale. The difference between a query taking 1ms vs 10 minutes is almost always a DSA choice.',
+    analogy:'<em>You already do this instinctively.</em> You don\'t store 500 server configs in a Word doc you ctrl+F through. You use structured YAML indexed by hostname. You use DNS instead of scanning IPs. You use monitoring dashboards instead of grep-ing every log. That IS DSA thinking — you just haven\'t had the formal names.',
+    systems:'<span>Every system ever built.</span> Linux kernel scheduler, Postgres query planner, Nginx upstream routing, Git history traversal, Terraform dependency resolution.',
+    probs:[] },
+
+  // BIG-O LENS
+  { id:'bigo',  label:'Big-O\nComplexity',     cx:0,    cy:-200, r:32, color:'#c9a84c', layer:'lens',
+    category:'THE LENS — Big-O Notation',
+    tagline:'How cost scales with input size. Your SLA math, formalized.',
+    why:'<span>O(1)</span> = always instant. <span>O(log n)</span> = barely grows. <span>O(n)</span> = linear. <span>O(n log n)</span> = sorting. <span>O(n²)</span> = will page you at scale.',
+    analogy:'<em>You already speak Big-O</em> — just not by name. "This Postgres query slows down as the table grows" = O(n) seq scan. "This Redis lookup is always instant" = O(1) hash. "This report takes hours monthly but seconds daily" = O(n²) somewhere.',
+    systems:'<span>EXPLAIN ANALYZE</span> in Postgres shows you Big-O. Redis docs list time complexity per command. Every capacity planning decision you\'ve made is applied Big-O.',
+    probs:[] },
+
+  // TWO PILLARS
+  { id:'shape',  label:'DATA\nSTRUCTURES',     cx:-300, cy:-60,  r:38, color:'#58a6ff', layer:'pillar',
+    category:'PILLAR 1 — Shape',
+    tagline:'The physical form data takes in memory. Shape determines what operations are cheap.',
+    why:'<span>Same data, different shape = 1000x speed difference.</span> A phonebook as a flat list vs indexed alphabetically. Same names. Same numbers. Wildly different lookup speed.',
+    analogy:'<em>Storage analogy.</em> Flat file vs relational DB vs Redis vs Kafka. All hold data. All have completely different access costs. Choosing between them is choosing a data structure.',
+    systems:'<span>Redis</span> (hash map + sorted set + list), <span>Postgres</span> (B-tree index), <span>Kafka</span> (ring buffer), <span>etcd</span> (trie/tree), <span>Elasticsearch</span> (inverted index).',
+    probs:[] },
+
+  { id:'algo',   label:'ALGORITHMS',           cx:300,  cy:-60,  r:38, color:'#f0883e', layer:'pillar',
+    category:'PILLAR 2 — Motion',
+    tagline:'What you DO to shaped data. How you traverse, search, sort, transform.',
+    why:'<span>Structure without motion is storage. Motion without structure is brute force.</span> Algorithms are the operations — and the right algorithm on the right structure is the whole game.',
+    analogy:'<em>Network protocol analogy.</em> Same topology, different routing algorithm. Link-state vs distance-vector — same graph, completely different convergence time. The algorithm is the difference.',
+    systems:'<span>OSPF/Dijkstra</span> (graph + greedy algo), <span>STP</span> (graph + BFS), <span>DNS</span> (trie + hash lookup), <span>Git bisect</span> (sorted list + binary search).',
+    probs:[] },
+
+  // DATA STRUCTURES
+  { id:'arr',    label:'Arrays &\nHashing',     cx:-520, cy:80,   r:28, color:'#3fb950', layer:'ds',
+    category:'DATA STRUCTURE — Arrays & Hash Maps',
+    tagline:'Contiguous memory (arrays) + key→bucket lookup (hash maps). The two most used structures.',
+    why:'<span>Arrays:</span> O(1) access by index when you know position. <span>Hash maps:</span> O(1) access by name when you don\'t know position.',
+    analogy:'<em>Arrays = blade chassis.</em> Every slot numbered. Walk to slot 7 directly. No scanning. <em>Hash maps = DNS.</em> "api.internal" → hash function → address. O(1), no scanning.',
+    systems:'<span>Prometheus</span> ring buffer (array), <span>Redis</span> (hash map), <span>Nginx</span> upstream map, <span>Ansible</span> inventory, every cache ever built.',
+    probs:[{t:'Contains Duplicate',d:'easy'},{t:'Two Sum',d:'easy'},{t:'Top K Frequent',d:'med'},{t:'Longest Consecutive',d:'med'}] },
+
+  { id:'ll',     label:'Linked\nLists',         cx:-520, cy:220,  r:26, color:'#3fb950', layer:'ds',
+    category:'DATA STRUCTURE — Linked Lists',
+    tagline:'Nodes connected by pointers. O(1) insert/delete anywhere. O(n) access.',
+    why:'<span>When you need frequent insertions/deletions at arbitrary positions</span> without shifting everything. Two pointer updates = done.',
+    analogy:'<em>Service mesh hop chain.</em> Each service only knows its next upstream. Insert a new service: update two pointers. No shifting the entire chain. No reindexing.',
+    systems:'<span>Linux kernel</span> process list, <span>LRU cache</span> internals (hash map + linked list), <span>Docker</span> layer chain, <span>TCP send buffer</span>.',
+    probs:[{t:'Reverse Linked List',d:'easy'},{t:'Merge Two Sorted Lists',d:'easy'},{t:'LRU Cache',d:'med'}] },
+
+  { id:'stk',    label:'Stack',                 cx:-380, cy:300,  r:26, color:'#3fb950', layer:'ds',
+    category:'DATA STRUCTURE — Stack',
+    tagline:'LIFO. Last in, first out. Push/pop in O(1). The "undo" structure.',
+    why:'<span>When you need to track history and reverse it.</span> Function call stack, undo operations, bracket matching, backtracking state.',
+    analogy:'<em>Incident call stack.</em> Last thing you deployed is first to roll back. When a service cascade-fails, you unwind in exactly reverse deployment order.',
+    systems:'<span>OS call stack</span>, <span>browser back button</span>, <span>Terraform destroy</span> (reverse dependency order), <span>undo/redo</span>, <span>expression evaluation</span>.',
+    probs:[{t:'Valid Parentheses',d:'easy'},{t:'Min Stack',d:'med'},{t:'Daily Temperatures',d:'med'},{t:'Largest Rectangle',d:'hard'}] },
+
+  { id:'q',      label:'Queue',                 cx:-250, cy:360,  r:24, color:'#3fb950', layer:'ds',
+    category:'DATA STRUCTURE — Queue',
+    tagline:'FIFO. First in, first out. Enqueue/dequeue in O(1). Decoupled producers/consumers.',
+    why:'<span>When order matters and you need to buffer work.</span> Process events in arrival order. Decouple producers from consumers.',
+    analogy:'<em>Kafka topic / SQS.</em> Messages processed in arrival order. Producer writes, consumer reads. Backpressure is natural. This IS a queue.',
+    systems:'<span>Kafka</span>, <span>SQS</span>, <span>RabbitMQ</span>, <span>OS I/O scheduler</span>, <span>BFS traversal</span>, print spoolers, task workers.',
+    probs:[{t:'Number of Islands (BFS)',d:'med'},{t:'Rotting Oranges',d:'med'},{t:'Walls and Gates',d:'med'}] },
+
+  { id:'tree',   label:'Trees',                 cx:-80,  cy:240,  r:30, color:'#3fb950', layer:'ds',
+    category:'DATA STRUCTURE — Trees',
+    tagline:'Hierarchical nodes. BST gives O(log n) search+insert. Many traversal strategies.',
+    why:'<span>Hierarchy + sorted order + fast search, all in one.</span> Binary Search Trees give you log n for everything. Self-balancing trees (red-black, AVL) guarantee it.',
+    analogy:'<em>Directory tree, OSPF topology, etcd key space.</em> You live in trees already. /etc/nginx/ is a tree. Your k8s namespace hierarchy is a tree. DNS is a tree.',
+    systems:'<span>Postgres B-tree indexes</span>, <span>Linux CFS scheduler</span> (red-black tree), <span>etcd</span>, <span>Linux VFS</span>, <span>XML/JSON</span> parsing.',
+    probs:[{t:'Invert Binary Tree',d:'easy'},{t:'Level Order Traversal',d:'med'},{t:'Validate BST',d:'med'},{t:'Max Path Sum',d:'hard'}] },
+
+  { id:'heap',   label:'Heap /\nPriority Q',    cx:80,   cy:280,  r:26, color:'#3fb950', layer:'ds',
+    category:'DATA STRUCTURE — Heap / Priority Queue',
+    tagline:'Always gives you the min or max instantly. O(log n) insert, O(1) peek.',
+    why:'<span>"What\'s most urgent right now?" — answered in O(1).</span> Not a sorted list — just a guarantee that the winner is always at the top.',
+    analogy:'<em>K8s PriorityClassName / QoS queue.</em> High-priority pods get scheduled first. DSCP bits determine queue order. You don\'t sort everything — you just always grab the highest priority.',
+    systems:'<span>K8s scheduler</span>, <span>Linux CFS</span>, <span>Dijkstra\'s algorithm</span>, <span>Huffman compression</span>, <span>Top-K queries</span>, <span>event simulation</span>.',
+    probs:[{t:'Kth Largest Element',d:'med'},{t:'K Closest Points',d:'med'},{t:'Task Scheduler',d:'med'},{t:'Find Median',d:'hard'}] },
+
+  { id:'trie',   label:'Trie',                  cx:220,  cy:220,  r:24, color:'#3fb950', layer:'ds',
+    category:'DATA STRUCTURE — Trie (Prefix Tree)',
+    tagline:'Prefix-indexed tree. O(k) lookup where k = key length. Longest-prefix-match.',
+    why:'<span>When you need to search by prefix</span> or find the most-specific matching rule. Routing tables, autocomplete, spell check.',
+    analogy:'<em>CIDR routing / iptables.</em> 10.0.0.0/8 vs 10.10.0.0/16 — the more specific prefix wins because you went deeper in the trie. Longest-prefix-match IS trie traversal.',
+    systems:'<span>Linux routing table</span>, <span>iptables</span>, <span>DNS caching resolvers</span>, <span>autocomplete</span>, <span>spell checkers</span>, <span>search engines</span>.',
+    probs:[{t:'Implement Trie',d:'med'},{t:'Add and Search Words',d:'med'},{t:'Word Search II',d:'hard'}] },
+
+  { id:'graph',  label:'Graphs',                cx:320,  cy:160,  r:32, color:'#3fb950', layer:'ds',
+    category:'DATA STRUCTURE — Graphs',
+    tagline:'Nodes + edges. No hierarchy required. The most general structure. Models ANY relationship.',
+    why:'<span>When anything connects to anything else</span> — no parent-child constraint. Social networks, road maps, dependency graphs, network topologies.',
+    analogy:'<em>BGP table. Terraform resource graph. K8s pod dependencies.</em> You work in graphs every day. terraform apply resolves a DAG. BGP is a weighted directed graph.',
+    systems:'<span>BGP</span>, <span>Terraform</span> resource DAG, <span>K8s</span> dependency resolver, <span>Git</span> commit DAG, <span>Google PageRank</span>, social networks.',
+    probs:[{t:'Number of Islands',d:'med'},{t:'Course Schedule',d:'med'},{t:'Clone Graph',d:'med'},{t:'Word Ladder',d:'hard'}] },
+
+  // ALGORITHMS
+  { id:'search', label:'Searching',             cx:500,  cy:60,   r:26, color:'#f0883e', layer:'algo',
+    category:'ALGORITHM FAMILY — Searching',
+    tagline:'Finding elements. Linear O(n) → Binary O(log n) → Hash O(1). Pick your weapon.',
+    why:'<span>The most fundamental operation.</span> Every system searches. The question is: at what cost? Linear scan vs index lookup vs hash resolve = orders of magnitude difference.',
+    analogy:'<em>Linear = port scan. Binary = bisect a sorted CIDR range. Hash = DNS resolve.</em> Three strategies. Three complexities. Your choice depends entirely on how the data is shaped.',
+    systems:'<span>Postgres</span> seq scan vs index scan, <span>Elasticsearch</span> inverted index, <span>Redis</span> SCAN vs GET, <span>Git bisect</span>.',
+    probs:[{t:'Binary Search',d:'easy'},{t:'Find Min Rotated Array',d:'med'},{t:'Search Rotated Array',d:'med'},{t:'Median of Two Sorted',d:'hard'}] },
+
+  { id:'sort',   label:'Sorting',               cx:500,  cy:180,  r:26, color:'#f0883e', layer:'algo',
+    category:'ALGORITHM FAMILY — Sorting',
+    tagline:'Ordering data. O(n log n) is the practical floor. Enables binary search everywhere.',
+    why:'<span>Sorted data unlocks everything else.</span> Binary search only works on sorted data. Range queries need sorted order. Merge operations need sorted inputs.',
+    analogy:'<em>LSM tree compaction / log aggregation.</em> RocksDB and Cassandra compact SSTables using merge sort. Prometheus sorts time series. You sort before you query ranges.',
+    systems:'<span>Postgres ORDER BY + merge join</span>, <span>LSM compaction</span> (RocksDB, Cassandra, LevelDB), <span>Hadoop MapReduce</span> sort phase, <span>Kafka offset ordering</span>.',
+    probs:[{t:'Sort Colors',d:'med'},{t:'Merge Intervals',d:'med'},{t:'Merge K Sorted Lists',d:'hard'}] },
+
+  { id:'traverse',label:'Traversal\nBFS / DFS', cx:500,  cy:300,  r:26, color:'#f0883e', layer:'algo',
+    category:'ALGORITHM FAMILY — Tree/Graph Traversal',
+    tagline:'BFS = level-by-level (shortest path). DFS = depth-first (explore fully before backtrack).',
+    why:'<span>To visit every node in a non-linear structure.</span> Or find shortest paths. Or detect cycles. Or resolve dependencies.',
+    analogy:'<em>BFS = STP flooding / broadcast.</em> Expand one hop at a time. Shortest path guaranteed. <em>DFS = traceroute / recursive DNS.</em> Go as deep as you can, backtrack on failure.',
+    systems:'<span>STP</span> (BFS), <span>traceroute</span> (DFS), <span>Terraform plan</span> (DFS DAG resolution), <span>find command</span> (DFS), <span>web crawlers</span> (BFS).',
+    probs:[{t:'Number of Islands',d:'med'},{t:'Pacific Atlantic',d:'med'},{t:'Course Schedule',d:'med'},{t:'Word Ladder',d:'hard'}] },
+
+  // ADVANCED
+  { id:'dp',     label:'Dynamic\nProgramming',  cx:500,  cy:430,  r:28, color:'#bc8cff', layer:'advanced',
+    category:'ADVANCED PATTERN — Dynamic Programming',
+    tagline:'Cache overlapping subproblems. Trade memory for time. The hardest but most powerful pattern.',
+    why:'<span>When you\'re computing the same subproblem hundreds of times.</span> DP says: compute once, cache, reuse. Turns exponential into polynomial.',
+    analogy:'<em>Terraform plan caching / memoization.</em> If module A is already resolved, don\'t re-plan it for every module that depends on it. Same principle. Cache the subresult.',
+    systems:'<span>Sequence alignment</span> (bioinformatics/Blast), <span>Viterbi</span> (HMM/speech recognition), <span>edit distance</span> (git diff, spell check), <span>Bellman-Ford</span> routing.',
+    probs:[{t:'Climbing Stairs',d:'easy'},{t:'House Robber',d:'med'},{t:'Coin Change',d:'med'},{t:'Longest Common Subseq',d:'med'}] },
+
+  { id:'greedy', label:'Greedy',                cx:360,  cy:430,  r:24, color:'#bc8cff', layer:'advanced',
+    category:'ADVANCED PATTERN — Greedy Algorithms',
+    tagline:'Always take the locally optimal choice. Works when local = global optimum.',
+    why:'<span>Simpler than DP. When you can prove that the greedy choice always leads to the global optimum.</span> Interval scheduling, Huffman encoding, shortest paths.',
+    analogy:'<em>OSPF/Dijkstra.</em> Always extend the shortest known path first. This is a greedy choice — and it works because extending a shorter path can\'t make it longer.',
+    systems:'<span>OSPF</span> (Dijkstra = greedy), <span>Huffman compression</span> (greedy encoding), <span>interval scheduling</span>, <span>TCP slow start</span> (sort of).',
+    probs:[{t:'Jump Game',d:'med'},{t:'Gas Station',d:'med'},{t:'Merge Intervals',d:'med'}] },
+
+  { id:'backtrack',label:'Back-\ntracking',     cx:220,  cy:430,  r:24, color:'#bc8cff', layer:'advanced',
+    category:'ADVANCED PATTERN — Backtracking',
+    tagline:'Explore all paths, prune dead ends. DFS + undo. Exhaustive but smart.',
+    why:'<span>When you need all valid solutions or the optimal among all possibilities.</span> Constraint satisfaction. Generate all combinations.',
+    analogy:'<em>A crawler with constraints.</em> Explore every path depth-first. Prune subtrees that violate rules (robots.txt, auth walls). Backtrack when you hit a dead end. Exactly this.',
+    systems:'<span>Regex backtracking engines</span>, <span>SAT solvers</span>, <span>chess AI</span>, <span>Sudoku solvers</span>, <span>network path enumeration</span>.',
+    probs:[{t:'Subsets',d:'med'},{t:'Combination Sum',d:'med'},{t:'Permutations',d:'med'},{t:'N-Queens',d:'hard'}] },
+
+  // REAL-WORLD DOMAINS
+  { id:'db',     label:'Databases',             cx:-200, cy:480,  r:22, color:'#39c5cf', layer:'domain',
+    category:'DOMAIN — Databases',
+    tagline:'Where DSA lives permanently. Every index, join, query plan is applied DSA.',
+    why:'<span>B-trees for indexes. Hash joins. Sort-merge joins. Buffer pool arrays. DP in the query planner.</span> Postgres is a DSA textbook.',
+    analogy:'<em>EXPLAIN ANALYZE</em> shows you live Big-O. Seq Scan = O(n). Index Scan = O(log n). Hash Join = O(n). Bitmap Index = clever union of sorted lists.',
+    systems:'<span>Postgres</span> (B-tree, hash join), <span>MySQL</span>, <span>MongoDB</span> (B-tree), <span>Redis</span> (hash+skiplist+list), <span>Cassandra</span> (LSM tree).',
+    probs:[] },
+
+  { id:'net',    label:'Networking',            cx:0,    cy:500,  r:22, color:'#39c5cf', layer:'domain',
+    category:'DOMAIN — Networking',
+    tagline:'Routing IS graph traversal. Every protocol is a named algorithm.',
+    why:'<span>BGP = weighted directed graph. OSPF = Dijkstra. STP = BFS. DNS = trie + hash. TCP = sliding window.</span> You already know all of this. You just didn\'t have the CS names.',
+    analogy:'<em>Your CCNA knowledge is a DSA cheat code.</em> Every networking concept maps 1:1 to a data structure or algorithm. You have 13 years of applied DSA in networking alone.',
+    systems:'<span>BGP</span> (graph), <span>OSPF</span> (Dijkstra/greedy), <span>STP</span> (BFS), <span>DNS</span> (trie+hash), <span>TCP</span> (sliding window + queue).',
+    probs:[] },
+
+  { id:'os',     label:'OS &\nSystems',         cx:180,  cy:480,  r:22, color:'#39c5cf', layer:'domain',
+    category:'DOMAIN — Operating Systems',
+    tagline:'The OS is a DSA masterclass. Schedulers, memory, file systems — all DSA.',
+    why:'<span>Process scheduler = heap. Virtual memory = tree. File system = tree. Page cache = hash map. I/O queue = queue.</span> The kernel is pure DSA.',
+    analogy:'<em>Linux CFS scheduler</em> uses a red-black tree (self-balancing BST). Every process is a node. O(log n) scheduling decisions. The vruntime value is the sort key.',
+    systems:'<span>Linux CFS</span> (red-black tree), <span>VFS</span> (tree), <span>page cache</span> (hash map), <span>block I/O layer</span> (queue), <span>malloc</span> (free list/heap).',
+    probs:[] },
+];
+
+const edges = [
+  {a:'why',b:'bigo',w:3},{a:'why',b:'shape',w:3},{a:'why',b:'algo',w:3},
+  {a:'bigo',b:'shape',w:2},{a:'bigo',b:'algo',w:2},
+  {a:'shape',b:'arr',w:3},{a:'shape',b:'ll',w:2},{a:'shape',b:'stk',w:2},
+  {a:'shape',b:'q',w:2},{a:'shape',b:'tree',w:3},{a:'shape',b:'heap',w:2},
+  {a:'shape',b:'trie',w:1},{a:'shape',b:'graph',w:3},
+  {a:'algo',b:'search',w:3},{a:'algo',b:'sort',w:3},{a:'algo',b:'traverse',w:3},
+  {a:'algo',b:'dp',w:2},{a:'algo',b:'greedy',w:2},{a:'algo',b:'backtrack',w:2},
+  {a:'arr',b:'search',w:2},{a:'arr',b:'sort',w:2},
+  {a:'tree',b:'traverse',w:3},{a:'graph',b:'traverse',w:3},
+  {a:'graph',b:'dp',w:2},{a:'heap',b:'greedy',w:2},
+  {a:'tree',b:'dp',w:1},{a:'ll',b:'stk',w:1},
+  {a:'stk',b:'backtrack',w:2},{a:'tree',b:'backtrack',w:1},
+  {a:'tree',b:'db',w:2},{a:'hmap',b:'db',w:2},{a:'sort',b:'db',w:1},
+  {a:'graph',b:'net',w:3},{a:'traverse',b:'net',w:2},{a:'trie',b:'net',w:2},
+  {a:'heap',b:'os',w:2},{a:'tree',b:'os',w:2},{a:'q',b:'os',w:1},
+  {a:'arr',b:'os',w:1},
+];
+
+// Compute screen positions (canvas center = 0,0 in node coords)
+const CX = W * 0.44, CY = H * 0.47;
+nodes.forEach(n => { n.sx = CX + n.cx; n.sy = CY + n.cy; });
+
+let cam = {x:0, y:0, scale:1};
+let dragging = false, dragStart = {x:0,y:0}, camStart = {x:0,y:0};
+let hoveredNode = null, lockedNode = null;
+let showLabels = true;
+let frame = 0;
+
+function toScreen(nx, ny) {
+  return {
+    x: (nx + cam.x) * cam.scale + W/2 * (1 - cam.scale),
+    y: (ny + cam.y) * cam.scale + H/2 * (1 - cam.scale),
+  };
+}
+
+function nodeAtMouse(mx, my) {
+  for (let i = nodes.length-1; i >= 0; i--) {
+    const n = nodes[i];
+    const s = toScreen(n.sx, n.sy);
+    const dist = Math.sqrt((mx-s.x)**2 + (my-s.y)**2);
+    if (dist < n.r * cam.scale * 1.4) return n;
+  }
+  return null;
+}
+
+function hexToRgb(hex) {
+  return { r: parseInt(hex.slice(1,3),16), g: parseInt(hex.slice(3,5),16), b: parseInt(hex.slice(5,7),16) };
+}
+
+function draw() {
+  // Smooth camera — lerp toward targets each frame
+  cam.x     += (target.x     - cam.x)     * 0.10;
+  cam.y     += (target.y     - cam.y)     * 0.10;
+  cam.scale += (target.scale - cam.scale) * 0.10;
+
+  ctx.clearRect(0,0,W,H);
+  frame++;
+
+  // Faint grid
+  ctx.save();
+  const gs = 80 * cam.scale;
+  const go = toScreen(0,0);
+  ctx.strokeStyle = 'rgba(255,255,255,0.015)';
+  ctx.lineWidth = 1;
+  for (let x = go.x % gs; x < W; x += gs) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+  for (let y = go.y % gs; y < H; y += gs) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+  ctx.restore();
+
+  const active = lockedNode || hoveredNode;
+
+  // Edges
+  edges.forEach(e => {
+    const na = nodes.find(n=>n.id===e.a), nb = nodes.find(n=>n.id===e.b);
+    if (!na||!nb) return;
+    const pa = toScreen(na.sx, na.sy), pb = toScreen(nb.sx, nb.sy);
+
+    let alpha, width, rgb;
+    const connected = active && (e.a===active.id || e.b===active.id);
+
+    if (active) {
+      if (connected) {
+        const other = e.a===active.id ? nb : na;
+        rgb = hexToRgb(other.color);
+        alpha = 0.75; width = 2;
+      } else {
+        rgb = {r:48,g:54,b:61}; alpha = 0.05; width = 0.5;
+      }
+    } else {
+      rgb = hexToRgb(na.color);
+      alpha = e.w===3 ? 0.2 : e.w===2 ? 0.1 : 0.05;
+      width = e.w===3 ? 1.5 : e.w===2 ? 1 : 0.5;
+    }
+
+    ctx.beginPath(); ctx.moveTo(pa.x, pa.y); ctx.lineTo(pb.x, pb.y);
+    ctx.strokeStyle = `rgba(${rgb.r},${rgb.g},${rgb.b},${alpha})`;
+    ctx.lineWidth = width;
+    ctx.setLineDash(e.w===1 ? [3,7] : []);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Arrowhead if connected + active
+    if (connected && active) {
+      const angle = Math.atan2(pb.y-pa.y, pb.x-pa.x);
+      const d = Math.sqrt((pb.x-pa.x)**2+(pb.y-pa.y)**2);
+      const tr = nb.r * cam.scale + 4;
+      const tx = pa.x + Math.cos(angle)*(d-tr);
+      const ty = pa.y + Math.sin(angle)*(d-tr);
+      ctx.beginPath();
+      ctx.moveTo(tx, ty);
+      ctx.lineTo(tx-9*Math.cos(angle-0.4), ty-9*Math.sin(angle-0.4));
+      ctx.lineTo(tx-9*Math.cos(angle+0.4), ty-9*Math.sin(angle+0.4));
+      ctx.closePath();
+      ctx.fillStyle = `rgba(${rgb.r},${rgb.g},${rgb.b},0.7)`;
+      ctx.fill();
+    }
+  });
+
+  // Nodes
+  nodes.forEach(n => {
+    const p = toScreen(n.sx, n.sy);
+    const r = n.r * cam.scale;
+    const isActive = active === n;
+    const isConnected = active && edges.some(e => (e.a===active.id&&e.b===n.id)||(e.b===active.id&&e.a===n.id));
+    const pulse = Math.sin(frame * 0.035 + nodes.indexOf(n) * 0.7) * 0.5 + 0.5;
+
+    const alpha = active && !isActive && !isConnected ? 0.18 : 1;
+    ctx.globalAlpha = alpha;
+
+    const rgb = hexToRgb(n.color);
+
+    // Glow
+    if (isActive || n.layer==='root') {
+      const gr = ctx.createRadialGradient(p.x,p.y,r*0.4,p.x,p.y,r*(isActive?3.5:2.5+pulse));
+      const str = isActive ? 0.45 : 0.2+pulse*0.15;
+      gr.addColorStop(0, `rgba(${rgb.r},${rgb.g},${rgb.b},${str})`);
+      gr.addColorStop(1, 'transparent');
+      ctx.beginPath(); ctx.arc(p.x,p.y,r*3.5,0,Math.PI*2);
+      ctx.fillStyle = gr; ctx.fill();
+    }
+
+    // Pulse ring
+    if (n.layer==='root') {
+      ctx.beginPath(); ctx.arc(p.x,p.y,r+8+pulse*6,0,Math.PI*2);
+      ctx.strokeStyle = `rgba(${rgb.r},${rgb.g},${rgb.b},${0.15+pulse*0.1})`;
+      ctx.lineWidth = 1.5; ctx.stroke();
+    }
+    if (isActive) {
+      ctx.beginPath(); ctx.arc(p.x,p.y,r+6+pulse*4,0,Math.PI*2);
+      ctx.strokeStyle = `rgba(${rgb.r},${rgb.g},${rgb.b},0.35)`;
+      ctx.lineWidth = 2; ctx.stroke();
+    }
+
+    // Fill
+    ctx.beginPath(); ctx.arc(p.x,p.y,r,0,Math.PI*2);
+    const bgMap = {root:'#1a1500',pillar:'#0a1020',lens:'#120f00',ds:'#0a1010',algo:'#120a00',advanced:'#100a18',domain:'#051518'};
+    ctx.fillStyle = bgMap[n.layer] || '#0f1318';
+    ctx.fill();
+    ctx.strokeStyle = isActive
+      ? `rgba(${rgb.r},${rgb.g},${rgb.b},1)`
+      : isConnected
+        ? `rgba(${rgb.r},${rgb.g},${rgb.b},0.7)`
+        : `rgba(${rgb.r},${rgb.g},${rgb.b},${active ? 0.15 : 0.35})`;
+    ctx.lineWidth = isActive ? 2.5 : isConnected ? 1.5 : 1;
+    ctx.stroke();
+
+    // Label
+    if (showLabels || isActive || isConnected) {
+      const lines = n.label.split('\n');
+      const baseSize = n.layer==='root'||n.layer==='pillar' ? 11 : 9;
+      const fs = Math.max(7, Math.round(baseSize * cam.scale));
+      ctx.font = `${isActive||n.layer==='root'?'bold ':''}${fs}px Courier New`;
+      ctx.textAlign = 'center';
+      ctx.fillStyle = isActive
+        ? n.color
+        : isConnected
+          ? `rgba(${rgb.r},${rgb.g},${rgb.b},0.9)`
+          : active
+            ? `rgba(${rgb.r},${rgb.g},${rgb.b},0.2)`
+            : `rgba(${rgb.r},${rgb.g},${rgb.b},0.75)`;
+      lines.forEach((line, i) => {
+        const offset = lines.length===1 ? 0 : (i - (lines.length-1)/2) * (fs+3);
+        ctx.fillText(line, p.x, p.y + 4 + offset);
+      });
+    }
+
+    ctx.globalAlpha = 1;
+  });
+
+  requestAnimationFrame(draw);
+}
+
+function showPanel(node) {
+  document.getElementById('p-cat').textContent = node.category;
+  document.getElementById('p-name').textContent = node.label.replace(/\n/g,' ');
+  document.getElementById('p-tag').textContent = node.tagline;
+  document.getElementById('p-why').innerHTML = node.why;
+  document.getElementById('p-analogy').innerHTML = node.analogy;
+  document.getElementById('p-systems').innerHTML = node.systems;
+  const pe = document.getElementById('p-probs');
+  pe.innerHTML = node.probs.length===0
+    ? '<span style="font-size:10px;color:#3d444d">Concept node — explore connected nodes for specific problems</span>'
+    : node.probs.map(p=>`<span class="prob-tag ${p.d}">${p.t}</span>`).join('');
+  document.getElementById('panel').classList.add('visible');
+  document.getElementById('hud-node').textContent = '▶  ' + node.label.replace(/\n/g,' ').toUpperCase();
+}
+
+function hidePanel() {
+  document.getElementById('panel').classList.remove('visible');
+  document.getElementById('hud-node').textContent = '14 DOMAINS · 150 NEETCODE PROBLEMS · INFINITE DEPTH →';
+}
+
+// ── SMOOTH CAMERA ─────────────────────────────────────────────────────────────
+// target values — draw() lerps cam toward these each frame (see top of draw)
+let target = { x: cam.x, y: cam.y, scale: cam.scale };
+const MIN_SCALE   = 0.35;
+const MAX_SCALE   = 3.5;
+const PAN_DAMPING = 0.55;  // drag feels slower / more deliberate than raw cursor
+
+// ── HOVER DEBOUNCE — panel only appears after cursor rests 120ms on a node ────
+let hoverTimer = null;
+cv.addEventListener('mousemove', e => {
+  if (dragging) {
+    target.x = camStart.x + (e.clientX - dragStart.x) * PAN_DAMPING / target.scale;
+    target.y = camStart.y + (e.clientY - dragStart.y) * PAN_DAMPING / target.scale;
+    return;
+  }
+  const n = nodeAtMouse(e.clientX, e.clientY);
+  hoveredNode = n;
+  cv.style.cursor = n ? 'pointer' : 'grab';
+  clearTimeout(hoverTimer);
+  if (n && !lockedNode)       hoverTimer = setTimeout(() => showPanel(n), 120);
+  else if (!n && !lockedNode) hoverTimer = setTimeout(() => hidePanel(),  80);
+});
+
+cv.addEventListener('mousedown', e => {
+  dragging = true;
+  dragStart = {x:e.clientX, y:e.clientY};
+  camStart  = {x:target.x,  y:target.y};   // capture target, not lerped cam
+  cv.style.cursor = 'grabbing';
+});
+
+cv.addEventListener('mouseup', e => {
+  const moved = Math.abs(e.clientX-dragStart.x)+Math.abs(e.clientY-dragStart.y) < 6;
+  dragging = false;
+  cv.style.cursor = 'grab';
+  if (moved) {
+    const n = nodeAtMouse(e.clientX, e.clientY);
+    if (n) {
+      if (lockedNode===n) { lockedNode=null; hidePanel(); }
+      else { lockedNode=n; showPanel(n); }
+    } else { lockedNode=null; hidePanel(); }
+  }
+});
+
+// ── WHEEL ZOOM — gentle accumulation, zoom toward mouse cursor ────────────────
+cv.addEventListener('wheel', e => {
+  e.preventDefault();
+  // Normalise: cap large trackpad bursts, give mouse wheel consistent feel
+  const delta = Math.sign(e.deltaY) * Math.min(Math.abs(e.deltaY), 60);
+  const factor = 1 - delta * 0.0012;  // very small per-pixel step
+  const newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, target.scale * factor));
+
+  // Keep the world point under the mouse fixed while scaling
+  const mx = e.clientX, my = e.clientY;
+  const worldX = (mx - W/2*(1-target.scale)) / target.scale - target.x;
+  const worldY = (my - H/2*(1-target.scale)) / target.scale - target.y;
+  target.scale = newScale;
+  target.x = (mx - W/2*(1-newScale)) / newScale - worldX;
+  target.y = (my - H/2*(1-newScale)) / newScale - worldY;
+}, {passive:false});
+
+function resetView() {
+  target = {x:0, y:0, scale:1};
+  lockedNode = null;
+  hidePanel();
+}
+function toggleLabels() { showLabels = !showLabels; }
+
+draw();
+</script>
+</body>
+</html>
